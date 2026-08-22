@@ -21,7 +21,6 @@
   h1{ font-family:'Caveat',cursive; font-size:clamp(30px,6vw,44px); margin:0 0 2px; color:var(--ink-2); font-weight:700; }
   .sub{ color:var(--muted); font-size:13px; margin-bottom:16px; text-align:center; max-width:480px; }
 
-  /* --- Lobby --- */
   .lobby{
     background:var(--panel); border:1px solid #ccd3da; border-radius:10px; padding:26px;
     max-width:420px; width:100%; text-align:center; box-shadow:0 2px 10px var(--paper-shadow);
@@ -33,6 +32,7 @@
     font-family:inherit; width:100%; padding:10px; border-radius:8px; border:1px solid #ccd3da;
     text-align:center; font-size:16px; margin-bottom:10px; background:#fafbfc;
   }
+  .lobby input::placeholder{ color:#a7afba; }
   .code-display{
     font-family:'Caveat',cursive; font-size:34px; letter-spacing:2px; color:var(--ink-2);
     background:#eef2ff; border:1px dashed #c7d2f5; border-radius:8px; padding:10px; margin:12px 0;
@@ -61,7 +61,6 @@
     padding:6px 8px; border-radius:6px; width:60px; text-align:center;
   }
 
-  /* --- Two-player panel row --- */
   .players-row{
     display:flex; gap:14px; width:100%; max-width:900px; margin-bottom:14px; flex-wrap:wrap; justify-content:center;
   }
@@ -69,7 +68,7 @@
     flex:1 1 260px; max-width:320px; background:var(--panel); border:2px solid #d5dae0; border-radius:10px;
     padding:12px 16px; text-align:center; transition: border-color .2s, box-shadow .2s;
   }
-  .player-card.active-turn{ border-color:var(--ink); box-shadow:0 0 0 3px #dce4fb; }
+  .player-card.won-round{ border-color:var(--ok); box-shadow:0 0 0 3px #d3f3e4; }
   .player-card .pname{ font-family:'Caveat',cursive; font-size:22px; color:var(--ink-2); font-weight:700; }
   .player-card .pmeta{ font-size:11px; color:var(--muted); }
   .player-card .pscore{ font-family:'Caveat',cursive; font-size:20px; color:var(--text); margin-top:4px; }
@@ -79,9 +78,9 @@
   .stats{ display:flex; gap:22px; align-items:center; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
   .stat .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
   .stat .value{ font-size:26px; font-weight:bold; color:var(--ink-2); font-family:'Caveat',cursive; font-variant-numeric:tabular-nums; }
-  .turn-badge{
-    font-family:'Caveat',cursive; font-size:20px; font-weight:700; padding:6px 14px; border-radius:20px;
-    background:#eef2ff; color:var(--ink-2); border:1px solid #c7d2f5;
+  .target-badge{
+    font-family:'Caveat',cursive; font-size:30px; font-weight:700; padding:6px 22px; border-radius:20px;
+    background:#eef2ff; color:var(--ink-2); border:2px solid var(--ink);
   }
 
   .layout{ display:flex; gap:18px; width:100%; max-width:900px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
@@ -107,18 +106,18 @@
     position:absolute; transform-origin:center; font-family:'Caveat',cursive; font-weight:700; color:var(--ink);
     cursor:pointer; user-select:none; line-height:1; padding:4px 6px; z-index:2;
   }
-  .num.found{ color:var(--ok); text-decoration:line-through; text-decoration-thickness:3px; opacity:0.35; }
+  .num.target-found{ color:var(--ok); text-decoration:line-through; text-decoration-thickness:3px; }
   .num.wrong{ animation:shake .28s; color:var(--bad); }
   @keyframes shake{ 0%,100%{margin-left:0;} 25%{margin-left:-4px;} 75%{margin-left:4px;} }
 
   .wait-overlay{
     position:absolute; inset:0; z-index:4; background:rgba(255,255,255,0.55);
     display:flex; align-items:center; justify-content:center; font-family:'Caveat',cursive;
-    font-size:22px; color:var(--ink-2); pointer-events:none;
+    font-size:22px; color:var(--ink-2); pointer-events:none; text-align:center; padding:20px;
   }
 
   .scorecard{
-    flex:0 1 300px; background:var(--panel); border:1px solid #ccd3da; border-radius:4px;
+    flex:0 1 320px; background:var(--panel); border:1px solid #ccd3da; border-radius:4px;
     box-shadow:0 2px 10px var(--paper-shadow); padding:14px; max-height:460px; overflow-y:auto;
   }
   .scorecard h3{ font-family:'Caveat',cursive; font-size:22px; margin:0 0 10px; color:var(--ink-2); text-align:center; }
@@ -129,10 +128,9 @@
   }
   table.scoregrid td{
     border:1px solid var(--board-line); height:30px; text-align:center; font-family:'Caveat',cursive;
-    font-size:17px; color:var(--ink-2);
+    font-size:16px; color:var(--ink-2);
   }
-  table.scoregrid td.turn-p1{ background:#eef2ff; }
-  table.scoregrid td.turn-p2{ background:#fff3e6; }
+  table.scoregrid td.winner-cell{ background:#d3f3e4; color:var(--ok); font-weight:700; }
 
   .footer-note{ color:var(--muted); font-size:11px; margin-top:16px; text-align:center; max-width:560px; }
   .gamearea{ display:none; }
@@ -142,18 +140,19 @@
 <body>
 
   <h1>Find the Number</h1>
-  <p class="sub" id="topSub">Juega en tiempo real con la otra persona por videollamada. Un número a la vez, turnos alternados.</p>
+  <p class="sub" id="topSub">Carrera en tiempo real: a los dos les aparece el mismo número, gana quien lo encuentre primero.</p>
 
   <!-- LOBBY -->
   <div class="lobby" id="lobby">
     <h2>Conectar sala</h2>
+    <input type="text" id="nameInput" placeholder="Tu nombre">
     <div class="lobby-tabs">
       <button id="tabHost">Crear sala</button>
       <button id="tabJoin" class="secondary">Unirse con código</button>
     </div>
 
     <div id="hostPane">
-      <p style="font-size:12px;color:var(--muted);">Presiona el botón, comparte el código con la otra persona y espera a que se una.</p>
+      <p style="font-size:12px;color:var(--muted);">Escribe tu nombre, presiona el botón y comparte el código.</p>
       <button id="createRoomBtn">Generar código</button>
       <div class="code-display hidden" id="hostCode"></div>
       <div class="status-line" id="hostStatus"></div>
@@ -171,20 +170,20 @@
 
     <div class="players-row">
       <div class="player-card" id="cardP1">
-        <div class="pname">Jugador 1 (anfitrión)</div>
+        <div class="pname" id="nameP1">Jugador 1</div>
         <div class="pmeta"><span class="conn-dot online" id="dotP1"></span><span id="metaP1">conectado</span></div>
-        <div class="pscore" id="scoreP1">0 aciertos</div>
+        <div class="pscore" id="scoreP1">0 rondas ganadas</div>
       </div>
       <div class="player-card" id="cardP2">
-        <div class="pname">Jugador 2 (invitado)</div>
+        <div class="pname" id="nameP2">Jugador 2</div>
         <div class="pmeta"><span class="conn-dot" id="dotP2"></span><span id="metaP2">esperando…</span></div>
-        <div class="pscore" id="scoreP2">0 aciertos</div>
+        <div class="pscore" id="scoreP2">0 rondas ganadas</div>
       </div>
     </div>
 
     <div class="toolbar">
       <label>Cantidad
-        <input type="number" id="countInput" value="30" min="10" max="60">
+        <input type="number" id="countInput" value="20" min="10" max="50">
       </label>
       <label>Distorsión
         <select id="difficultySel">
@@ -193,36 +192,35 @@
           <option value="alta">Alta</option>
         </select>
       </label>
-      <button id="newGridBtn" class="secondary">Nuevo tablero</button>
     </div>
 
     <div class="toolbar">
-      <button id="startBtn">Iniciar</button>
+      <button id="startBtn">Iniciar juego</button>
+      <button id="nextRoundBtn" class="hidden">Siguiente ronda</button>
       <button id="pauseBtn" class="pause" disabled>Pausar</button>
       <button id="resetBtn" class="reset">Reiniciar</button>
     </div>
 
     <div class="stats">
-      <div class="turn-badge" id="turnBadge">Turno: —</div>
-      <div class="stat"><div class="label">Tiempo número actual</div><div class="value" id="timerVal">00.00</div></div>
-      <div class="stat"><div class="label">Buscando</div><div class="value" id="nextVal">1</div></div>
-      <div class="stat"><div class="label">Encontrados</div><div class="value" id="foundVal">0/30</div></div>
+      <div class="target-badge" id="targetBadge">?</div>
+      <div class="stat"><div class="label">Tiempo</div><div class="value" id="timerVal">00.00</div></div>
+      <div class="stat"><div class="label">Ronda</div><div class="value" id="roundVal">0/20</div></div>
     </div>
 
     <div class="layout">
       <div class="board-wrap" id="boardWrap">
-        <div class="wait-overlay hidden" id="waitOverlay">Espera tu turno…</div>
+        <div class="wait-overlay hidden" id="waitOverlay">Esperando…</div>
       </div>
       <div class="scorecard">
-        <h3>Registro por número</h3>
+        <h3>Resultados por ronda</h3>
         <table class="scoregrid" id="scoreTable">
-          <thead><tr><th>N°</th><th>Turno</th><th>Tiempo</th></tr></thead>
+          <thead><tr><th>#</th><th>N°</th><th id="thP1">J1</th><th id="thP2">J2</th></tr></thead>
           <tbody id="scoreBody"></tbody>
         </table>
       </div>
     </div>
 
-    <div class="footer-note">Solo controles de Jugador 1 (anfitrión): cantidad, distorsión, nuevo tablero e iniciar/reiniciar. Ambos pueden pausar. Solo puede hacer clic quien tenga el turno activo.</div>
+    <div class="footer-note">Controles de armar partida (cantidad, distorsión, iniciar, siguiente ronda, reiniciar) solo los tiene el anfitrión. Ambos pueden pausar. En cada ronda aparece un número objetivo — el primero en tocarlo correctamente gana esa ronda; el tablero cambia de posición en cada ronda.</div>
   </div>
 
 <script>
@@ -230,6 +228,7 @@
   // ---------- Lobby / connection ----------
   const lobby = document.getElementById('lobby');
   const gamearea = document.getElementById('gamearea');
+  const nameInput = document.getElementById('nameInput');
   const tabHost = document.getElementById('tabHost');
   const tabJoin = document.getElementById('tabJoin');
   const hostPane = document.getElementById('hostPane');
@@ -254,12 +253,13 @@
   let conn = null;
   let isHost = false;
   let localPlayer = null; // 1 or 2
+  let myName = 'Jugador 1';
+  let otherName = 'Jugador 2';
 
-  function roomIdFrom(str){
-    return 'ftn-' + str.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
-  }
+  function roomIdFrom(str){ return 'ftn-' + str.trim().toLowerCase().replace(/[^a-z0-9]/g,''); }
 
   createRoomBtn.addEventListener('click', ()=>{
+    myName = nameInput.value.trim() || 'Jugador 1';
     isHost = true; localPlayer = 1;
     const code = Math.random().toString(36).substring(2,7);
     const fullId = roomIdFrom(code);
@@ -268,20 +268,21 @@
     peer.on('open', ()=>{
       hostCode.textContent = code;
       hostCode.classList.remove('hidden');
-      hostStatus.textContent = 'Comparte este código. Esperando a que se una Jugador 2...';
+      hostStatus.textContent = 'Comparte este código. Esperando a que se una el invitado...';
     });
     peer.on('connection', (c)=>{
       conn = c;
       setupConnection();
       conn.on('open', ()=>{
-        hostStatus.textContent = '¡Jugador 2 conectado!';
-        enterGame();
+        send({type:'hello', name: myName});
+        hostStatus.textContent = '¡Invitado conectado!';
       });
     });
     peer.on('error', (err)=>{ hostStatus.textContent = 'Error: ' + err.type; });
   });
 
   joinRoomBtn.addEventListener('click', ()=>{
+    myName = nameInput.value.trim() || 'Jugador 2';
     const code = joinCodeInput.value;
     if(!code.trim()){ joinStatus.textContent = 'Escribe el código primero.'; return; }
     isHost = false; localPlayer = 2;
@@ -292,8 +293,8 @@
       conn = peer.connect(fullId, {reliable:true});
       setupConnection();
       conn.on('open', ()=>{
+        send({type:'hello', name: myName});
         joinStatus.textContent = '¡Conectado!';
-        enterGame();
       });
     });
     peer.on('error', (err)=>{ joinStatus.textContent = 'Error: ' + err.type + ' — revisa el código.'; });
@@ -303,9 +304,13 @@
     lobby.classList.add('hidden');
     gamearea.classList.add('show');
     updateConnDots(true);
+    document.getElementById('nameP1').textContent = isHost ? myName : otherName;
+    document.getElementById('nameP2').textContent = isHost ? otherName : myName;
+    document.getElementById('thP1').textContent = isHost ? myName : otherName;
+    document.getElementById('thP2').textContent = isHost ? otherName : myName;
     if(!isHost){
       document.querySelectorAll('#gamearea .toolbar')[0].querySelectorAll('input,select,button').forEach(el=>el.disabled=true);
-      startBtn.disabled = true; resetBtn.disabled = true; newGridBtn.disabled = true;
+      startBtn.disabled = true; resetBtn.disabled = true; nextRoundBtn.disabled = true;
     }
   }
 
@@ -314,26 +319,23 @@
     document.getElementById('metaP2').textContent = online ? 'conectado' : 'desconectado';
   }
 
+  let gameStarted = false;
   function setupConnection(){
     conn.on('data', (msg)=>{ handleMessage(msg); });
     conn.on('close', ()=>{ updateConnDots(false); });
   }
-
-  function send(msg){
-    if(conn && conn.open) conn.send(msg);
-  }
+  function send(msg){ if(conn && conn.open) conn.send(msg); }
 
   // ---------- Game logic ----------
   const boardWrap = document.getElementById('boardWrap');
   const waitOverlay = document.getElementById('waitOverlay');
   const timerVal = document.getElementById('timerVal');
-  const nextVal = document.getElementById('nextVal');
-  const foundVal = document.getElementById('foundVal');
-  const turnBadge = document.getElementById('turnBadge');
+  const roundVal = document.getElementById('roundVal');
+  const targetBadge = document.getElementById('targetBadge');
   const startBtn = document.getElementById('startBtn');
+  const nextRoundBtn = document.getElementById('nextRoundBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const resetBtn = document.getElementById('resetBtn');
-  const newGridBtn = document.getElementById('newGridBtn');
   const countInput = document.getElementById('countInput');
   const difficultySel = document.getElementById('difficultySel');
   const scoreBody = document.getElementById('scoreBody');
@@ -342,18 +344,17 @@
   const scoreP1 = document.getElementById('scoreP1');
   const scoreP2 = document.getElementById('scoreP2');
 
-  let count = 30;
-  let nextNumber = 1;
+  let count = 20;
+  let targetQueue = [];       // host-only: shuffled remaining targets
+  let roundIndex = 0;         // 1-based current round
+  let currentTarget = null;
   let segmentStart = null;
   let elapsedBeforePause = 0;
   let rafId = null;
   let running = false;
   let paused = false;
-  let gameActive = false;
-  let aciertos = {1:0, 2:0};
-
-  function turnLabel(n){ return (n % 2 === 1) ? 'Jugador 1' : 'Jugador 2'; }
-  function activePlayerFor(n){ return (n % 2 === 1) ? 1 : 2; }
+  let roundDecided = false;
+  let wins = {1:0, 2:0};
 
   function randomPositions(n){
     const pts = [];
@@ -418,58 +419,38 @@
     });
   }
 
-  function buildBoardData(){
-    count = Math.max(10, Math.min(60, parseInt(countInput.value)||30));
-    countInput.value = count;
+  // Host builds one round's data: full board 1..count scattered + a target from queue
+  function buildRoundData(){
     const positions = randomPositions(count);
     const nums = Array.from({length:count}, (_,i)=>i+1);
     for(let i=nums.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [nums[i],nums[j]]=[nums[j],nums[i]]; }
     const sizes = positions.map(()=>({ rot:(Math.random()*30-15).toFixed(1), size:(20+Math.random()*14).toFixed(0) }));
     const distractors = genDistractors(difficultySel.value);
-    return { positions, nums, sizes, distractors, count };
+    const target = targetQueue.pop();
+    roundIndex++;
+    return { positions, nums, sizes, distractors, count, target, round: roundIndex };
   }
 
-  function applyBoard(data){
+  function applyRoundData(data){
     [...boardWrap.querySelectorAll('.num, .distractor')].forEach(el=>el.remove());
     count = data.count;
+    currentTarget = data.target;
+    roundIndex = data.round;
     renderDistractors(data.distractors);
     renderNumbers(data.positions, data.nums, data.sizes);
-    nextNumber = 1;
-    elapsedBeforePause = 0;
-    aciertos = {1:0,2:0};
-    updateAciertos();
-    nextVal.textContent = nextNumber;
-    foundVal.textContent = `0/${count}`;
+    targetBadge.textContent = currentTarget;
+    roundVal.textContent = `${roundIndex}/${count}`;
     timerVal.textContent = '00.00';
-    turnBadge.textContent = 'Turno: ' + turnLabel(nextNumber);
-    scoreBody.innerHTML = '';
-    gameActive = true;
-    updateTurnHighlight();
-    updateLockState();
+    elapsedBeforePause = 0;
+    roundDecided = false;
+    cardP1.classList.remove('won-round'); cardP2.classList.remove('won-round');
+    boardWrap.classList.remove('locked');
+    waitOverlay.classList.add('hidden');
   }
 
-  function updateAciertos(){
-    scoreP1.textContent = aciertos[1] + ' aciertos';
-    scoreP2.textContent = aciertos[2] + ' aciertos';
-  }
-
-  function updateTurnHighlight(){
-    const active = activePlayerFor(nextNumber);
-    cardP1.classList.toggle('active-turn', active===1 && running);
-    cardP2.classList.toggle('active-turn', active===2 && running);
-  }
-
-  function updateLockState(){
-    const active = activePlayerFor(nextNumber);
-    const myTurn = (active === localPlayer);
-    const shouldLock = !(running && myTurn);
-    boardWrap.classList.toggle('locked', shouldLock);
-    waitOverlay.classList.toggle('hidden', !shouldLock || !gameActive || !running ? true : false);
-    if(gameActive && running && !myTurn){
-      waitOverlay.classList.remove('hidden');
-    } else {
-      waitOverlay.classList.add('hidden');
-    }
+  function updateScoreLabels(){
+    scoreP1.textContent = wins[1] + ' rondas ganadas';
+    scoreP2.textContent = wins[2] + ' rondas ganadas';
   }
 
   function tick(){
@@ -479,83 +460,93 @@
     rafId = requestAnimationFrame(tick);
   }
 
-  function localOnTapAllowed(){
-    return running && activePlayerFor(nextNumber) === localPlayer;
+  function beginRoundTimer(){
+    running = true; paused = false; roundDecided = false;
+    segmentStart = performance.now();
+    pauseBtn.disabled = false; pauseBtn.textContent = 'Pausar';
+    tick();
   }
 
   function onTap(el){
-    if(!localOnTapAllowed()) return;
+    if(!running || roundDecided) return;
     const val = parseInt(el.dataset.value);
-    if(val === nextNumber){
+    if(val === currentTarget){
       const elapsedMs = elapsedBeforePause + (performance.now() - segmentStart);
       const seconds = (elapsedMs/1000).toFixed(2);
-      registerFound(nextNumber, seconds, true);
-      send({type:'found', number: nextNumber, seconds});
+      if(isHost){
+        decideRoundWin(1, seconds); // host is player 1, wins locally & authoritatively
+      } else {
+        send({type:'foundAttempt', round: roundIndex, seconds});
+      }
     } else {
       el.classList.add('wrong');
       setTimeout(()=>el.classList.remove('wrong'), 280);
     }
   }
 
-  function registerFound(number, seconds, isLocal){
-    const els = boardWrap.querySelectorAll('.num');
-    els.forEach(e=>{ if(parseInt(e.dataset.value)===number) e.classList.add('found'); });
-
-    const p = activePlayerFor(number);
-    aciertos[p]++;
-    updateAciertos();
-
-    const row = document.createElement('tr');
-    const turnClass = (p===1) ? 'turn-p1' : 'turn-p2';
-    row.innerHTML = `<td>${number}</td><td class="${turnClass}">${turnLabel(number)}</td><td>${seconds}s</td>`;
-    scoreBody.prepend(row);
-
-    running = false; paused = false;
-    cancelAnimationFrame(rafId);
-    pauseBtn.disabled = true; pauseBtn.textContent = 'Pausar';
-    elapsedBeforePause = 0;
-
-    nextNumber++;
-    if(nextNumber > count){
-      nextVal.textContent = '—';
-      foundVal.textContent = `${count}/${count}`;
-      turnBadge.textContent = '¡Completado!';
-      startBtn.textContent = 'Iniciar';
-      if(isHost) startBtn.disabled = true;
-      gameActive = false;
-    } else {
-      nextVal.textContent = nextNumber;
-      foundVal.textContent = `${nextNumber-1}/${count}`;
-      turnBadge.textContent = 'Turno: ' + turnLabel(nextNumber);
-      timerVal.textContent = '00.00';
-      startBtn.textContent = 'Siguiente número';
-      if(isHost) startBtn.disabled = false;
-    }
-    updateTurnHighlight();
-    updateLockState();
+  // HOST ONLY: authoritative decision of who won the round
+  function decideRoundWin(winnerPlayer, seconds){
+    if(roundDecided) return;
+    roundDecided = true;
+    applyRoundWin(winnerPlayer, seconds);
+    send({type:'roundWin', winner: winnerPlayer, seconds, round: roundIndex, target: currentTarget});
   }
 
-  function beginSegment(fromRemote){
-    running = true; paused = false;
-    segmentStart = performance.now();
-    pauseBtn.disabled = false; pauseBtn.textContent = 'Pausar';
-    tick();
-    updateTurnHighlight();
-    updateLockState();
+  function applyRoundWin(winnerPlayer, seconds){
+    running = false;
+    cancelAnimationFrame(rafId);
+    pauseBtn.disabled = true; pauseBtn.textContent = 'Pausar';
+    boardWrap.classList.add('locked');
+    const els = boardWrap.querySelectorAll('.num');
+    els.forEach(e=>{ if(parseInt(e.dataset.value)===currentTarget) e.classList.add('target-found'); });
+
+    wins[winnerPlayer]++;
+    updateScoreLabels();
+    if(winnerPlayer===1){ cardP1.classList.add('won-round'); } else { cardP2.classList.add('won-round'); }
+
+    const row = document.createElement('tr');
+    const p1cell = (winnerPlayer===1) ? `<td class="winner-cell">${seconds}s</td>` : `<td>—</td>`;
+    const p2cell = (winnerPlayer===2) ? `<td class="winner-cell">${seconds}s</td>` : `<td>—</td>`;
+    row.innerHTML = `<td>${roundIndex}</td><td>${currentTarget}</td>${p1cell}${p2cell}`;
+    scoreBody.prepend(row);
+
+    if(targetQueue.length === 0 && roundIndex >= count){
+      targetBadge.textContent = '🏁';
+      roundVal.textContent = `${count}/${count}`;
+      if(isHost){ startBtn.classList.remove('hidden'); startBtn.disabled = false; startBtn.textContent = 'Nuevo juego'; nextRoundBtn.classList.add('hidden'); gameStarted = false; }
+    } else {
+      if(isHost){ nextRoundBtn.classList.remove('hidden'); nextRoundBtn.disabled = false; startBtn.classList.add('hidden'); }
+    }
   }
 
   startBtn.addEventListener('click', ()=>{
     if(!isHost) return;
-    if(!gameActive){
-      const data = buildBoardData();
-      send({type:'board', data});
-      applyBoard(data);
-    }
-    elapsedBeforePause = 0;
-    beginSegment();
-    startBtn.textContent = 'Buscando…';
-    startBtn.disabled = true;
-    send({type:'start'});
+    count = Math.max(10, Math.min(50, parseInt(countInput.value)||20));
+    countInput.value = count;
+    targetQueue = Array.from({length:count}, (_,i)=>i+1);
+    for(let i=targetQueue.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [targetQueue[i],targetQueue[j]]=[targetQueue[j],targetQueue[i]]; }
+    roundIndex = 0;
+    wins = {1:0,2:0}; updateScoreLabels();
+    scoreBody.innerHTML = '';
+    gameStarted = true;
+    const data = buildRoundData();
+    send({type:'round', data});
+    applyRoundData(data);
+    beginRoundTimer();
+    send({type:'startTimer'});
+    startBtn.classList.add('hidden');
+    nextRoundBtn.classList.add('hidden');
+  });
+
+  nextRoundBtn.addEventListener('click', ()=>{
+    if(!isHost) return;
+    if(targetQueue.length === 0) return;
+    const data = buildRoundData();
+    send({type:'round', data});
+    applyRoundData(data);
+    beginRoundTimer();
+    send({type:'startTimer'});
+    nextRoundBtn.classList.add('hidden');
   });
 
   pauseBtn.addEventListener('click', ()=>{
@@ -572,8 +563,6 @@
       tick();
       send({type:'resume'});
     }
-    updateTurnHighlight();
-    updateLockState();
   });
 
   resetBtn.addEventListener('click', ()=>{
@@ -583,59 +572,52 @@
   });
 
   function doReset(){
-    running=false; paused=false; gameActive=false;
+    running=false; paused=false; roundDecided=false; gameStarted=false;
     cancelAnimationFrame(rafId);
     elapsedBeforePause = 0;
+    roundIndex = 0; targetQueue = [];
+    wins = {1:0,2:0}; updateScoreLabels();
     [...boardWrap.querySelectorAll('.num, .distractor')].forEach(el=>el.remove());
     scoreBody.innerHTML = '';
-    aciertos = {1:0,2:0}; updateAciertos();
     timerVal.textContent = '00.00';
-    nextVal.textContent = '1';
-    foundVal.textContent = `0/${countInput.value}`;
-    turnBadge.textContent = 'Turno: —';
-    startBtn.textContent = 'Iniciar';
-    if(isHost) startBtn.disabled = false;
+    targetBadge.textContent = '?';
+    roundVal.textContent = `0/${countInput.value}`;
     pauseBtn.disabled = true; pauseBtn.textContent = 'Pausar';
-    cardP1.classList.remove('active-turn'); cardP2.classList.remove('active-turn');
+    cardP1.classList.remove('won-round'); cardP2.classList.remove('won-round');
     waitOverlay.classList.add('hidden');
     boardWrap.classList.remove('locked');
+    if(isHost){ startBtn.classList.remove('hidden'); startBtn.disabled = false; startBtn.textContent = 'Iniciar juego'; nextRoundBtn.classList.add('hidden'); }
   }
 
-  newGridBtn.addEventListener('click', ()=>{
-    if(!isHost) return;
-    running=false; paused=false;
-    cancelAnimationFrame(rafId);
-    elapsedBeforePause = 0;
-    const data = buildBoardData();
-    send({type:'board', data});
-    applyBoard(data);
-    startBtn.textContent = 'Iniciar';
-    startBtn.disabled = false;
-    pauseBtn.disabled = true; pauseBtn.textContent = 'Pausar';
-  });
-
   function handleMessage(msg){
-    if(msg.type === 'board'){
-      applyBoard(msg.data);
-      startBtn.textContent = 'Iniciar';
-    } else if(msg.type === 'start'){
-      beginSegment(true);
-      startBtn.textContent = 'Buscando…';
-    } else if(msg.type === 'found'){
-      registerFound(msg.number, msg.seconds, false);
+    if(msg.type === 'hello'){
+      otherName = msg.name || otherName;
+      enterGame();
+    } else if(msg.type === 'round'){
+      applyRoundData(msg.data);
+    } else if(msg.type === 'startTimer'){
+      beginRoundTimer();
+    } else if(msg.type === 'foundAttempt'){
+      // host-only arbitration
+      if(isHost && msg.round === roundIndex){
+        decideRoundWin(2, msg.seconds);
+      }
+    } else if(msg.type === 'roundWin'){
+      if(!roundDecided){
+        roundDecided = true;
+        applyRoundWin(msg.winner, msg.seconds);
+      }
     } else if(msg.type === 'pause'){
       if(running){
         running = false; cancelAnimationFrame(rafId);
         elapsedBeforePause += performance.now() - segmentStart;
         pauseBtn.textContent = 'Reanudar'; pauseBtn.disabled = false;
       }
-      updateTurnHighlight(); updateLockState();
     } else if(msg.type === 'resume'){
       segmentStart = performance.now();
       running = true; paused = false;
       pauseBtn.textContent = 'Pausar';
       tick();
-      updateTurnHighlight(); updateLockState();
     } else if(msg.type === 'reset'){
       doReset();
     }
