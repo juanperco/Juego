@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find the Number - Online</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&display=swap');
+
+  :root{
+    --board:#fff; --board-line:#dfe3e6; --ink:#1e4fd6; --ink-2:#17399c;
+    --paper-shadow: rgba(0,0,0,0.15); --bg:#e9edf1; --panel:#fff; --text:#20242a;
+    --muted:#6b7480; --accent:#1e4fd6; --ok:#1fa669; --bad:#d64545; --warn:#e0a72e; --shape:#c7cedb;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Kalam',cursive; background:var(--bg); color:var(--text);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 14px 60px;
+  }
+  h1{ font-family:'Caveat',cursive; font-size:clamp(30px,6vw,44px); margin:0 0 2px; color:var(--ink-2); font-weight:700; }
+  .sub{ color:var(--muted); font-size:13px; margin-bottom:16px; text-align:center; max-width:480px; }
+
+  /* --- Lobby --- */
+  .lobby{
+    background:var(--panel); border:1px solid #ccd3da; border-radius:10px; padding:26px;
+    max-width:420px; width:100%; text-align:center; box-shadow:0 2px 10px var(--paper-shadow);
+  }
+  .lobby h2{ font-family:'Caveat',cursive; color:var(--ink-2); font-size:26px; margin:0 0 12px;}
+  .lobby-tabs{ display:flex; gap:8px; justify-content:center; margin-bottom:16px; }
+  .lobby-tabs button{ flex:1; }
+  .lobby input{
+    font-family:inherit; width:100%; padding:10px; border-radius:8px; border:1px solid #ccd3da;
+    text-align:center; font-size:16px; margin-bottom:10px; background:#fafbfc;
+  }
+  .code-display{
+    font-family:'Caveat',cursive; font-size:34px; letter-spacing:2px; color:var(--ink-2);
+    background:#eef2ff; border:1px dashed #c7d2f5; border-radius:8px; padding:10px; margin:12px 0;
+    word-break:break-all;
+  }
+  .status-line{ font-size:12px; color:var(--muted); margin-top:8px; min-height:16px; }
+  .hidden{ display:none !important; }
+
+  button{
+    font-family:'Kalam',cursive; font-size:14px; font-weight:700; padding:9px 14px; border-radius:8px;
+    border:none; cursor:pointer; background:var(--accent); color:#fff;
+  }
+  button.secondary{ background:#fff; color:var(--text); border:1px solid #ccd3da; }
+  button.pause{ background:var(--warn); color:#2a2200; }
+  button.reset{ background:var(--bad); }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+  button:active{ transform:scale(.96); }
+
+  .toolbar{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center;
+    margin-bottom:14px; background:var(--panel); border:1px solid #d5dae0; border-radius:10px; padding:10px 16px;
+  }
+  .toolbar label{ font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:4px; align-items:center; }
+  .toolbar input, .toolbar select{
+    font-family:inherit; background:#fafbfc; border:1px solid #ccd3da; color:var(--text);
+    padding:6px 8px; border-radius:6px; width:60px; text-align:center;
+  }
+
+  /* --- Two-player panel row --- */
+  .players-row{
+    display:flex; gap:14px; width:100%; max-width:900px; margin-bottom:14px; flex-wrap:wrap; justify-content:center;
+  }
+  .player-card{
+    flex:1 1 260px; max-width:320px; background:var(--panel); border:2px solid #d5dae0; border-radius:10px;
+    padding:12px 16px; text-align:center; transition: border-color .2s, box-shadow .2s;
+  }
+  .player-card.active-turn{ border-color:var(--ink); box-shadow:0 0 0 3px #dce4fb; }
+  .player-card .pname{ font-family:'Caveat',cursive; font-size:22px; color:var(--ink-2); font-weight:700; }
+  .player-card .pmeta{ font-size:11px; color:var(--muted); }
+  .player-card .pscore{ font-family:'Caveat',cursive; font-size:20px; color:var(--text); margin-top:4px; }
+  .conn-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--bad); margin-right:4px; }
+  .conn-dot.online{ background:var(--ok); }
+
+  .stats{ display:flex; gap:22px; align-items:center; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+  .stat .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+  .stat .value{ font-size:26px; font-weight:bold; color:var(--ink-2); font-family:'Caveat',cursive; font-variant-numeric:tabular-nums; }
+  .turn-badge{
+    font-family:'Caveat',cursive; font-size:20px; font-weight:700; padding:6px 14px; border-radius:20px;
+    background:#eef2ff; color:var(--ink-2); border:1px solid #c7d2f5;
+  }
+
+  .layout{ display:flex; gap:18px; width:100%; max-width:900px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+
+  .board-wrap{
+    position:relative; flex:1 1 480px; max-width:560px; aspect-ratio:4/3.1;
+    background:
+      repeating-linear-gradient(var(--board-line) 0 1px, transparent 1px 34px),
+      repeating-linear-gradient(90deg, var(--board-line) 0 1px, transparent 1px 34px),
+      var(--board);
+    border:1px solid #ccd3da; border-radius:4px; box-shadow:0 2px 10px var(--paper-shadow); overflow:hidden;
+  }
+  .board-wrap.locked .num{ pointer-events:none; }
+
+  .distractor{ position:absolute; pointer-events:none; opacity:0.55; }
+  .distractor.circle{ border-radius:50%; border:2px solid var(--shape); }
+  .distractor.square{ border:2px solid var(--shape); }
+  .distractor.line{ background:var(--shape); height:2px; }
+  .distractor.scribble{ border:2px dashed var(--shape); border-radius:40% 60% 55% 45%; }
+  .distractor.fakenum{ font-family:'Caveat',cursive; font-weight:700; color:#b9c2d6; }
+
+  .num{
+    position:absolute; transform-origin:center; font-family:'Caveat',cursive; font-weight:700; color:var(--ink);
+    cursor:pointer; user-select:none; line-height:1; padding:4px 6px; z-index:2;
+  }
+  .num.found{ color:var(--ok); text-decoration:line-through; text-decoration-thickness:3px; opacity:0.35; }
+  .num.wrong{ animation:shake .28s; color:var(--bad); }
+  @keyframes shake{ 0%,100%{margin-left:0;} 25%{margin-left:-4px;} 75%{margin-left:4px;} }
+
+  .wait-overlay{
+    position:absolute; inset:0; z-index:4; background:rgba(255,255,255,0.55);
+    display:flex; align-items:center; justify-content:center; font-family:'Caveat',cursive;
+    font-size:22px; color:var(--ink-2); pointer-events:none;
+  }
+
+  .scorecard{
+    flex:0 1 300px; background:var(--panel); border:1px solid #ccd3da; border-radius:4px;
+    box-shadow:0 2px 10px var(--paper-shadow); padding:14px; max-height:460px; overflow-y:auto;
+  }
+  .scorecard h3{ font-family:'Caveat',cursive; font-size:22px; margin:0 0 10px; color:var(--ink-2); text-align:center; }
+  table.scoregrid{ border-collapse:collapse; width:100%; }
+  table.scoregrid th{
+    font-size:11px; color:var(--muted); text-transform:uppercase; padding:4px; border:1px solid var(--board-line);
+    background:#fafbfc; position:sticky; top:0;
+  }
+  table.scoregrid td{
+    border:1px solid var(--board-line); height:30px; text-align:center; font-family:'Caveat',cursive;
+    font-size:17px; color:var(--ink-2);
+  }
+  table.scoregrid td.turn-p1{ background:#eef2ff; }
+  table.scoregrid td.turn-p2{ background:#fff3e6; }
+
+  .footer-note{ color:var(--muted); font-size:11px; margin-top:16px; text-align:center; max-width:560px; }
+  .gamearea{ display:none; }
+  .gamearea.show{ display:flex; flex-direction:column; align-items:center; width:100%; }
+</style>
+</head>
+<body>
+
+  <h1>Find the Number</h1>
+  <p class="sub" id="topSub">Juega en tiempo real con la otra persona por videollamada. Un número a la vez, turnos alternados.</p>
+
+  <!-- LOBBY -->
+  <div class="lobby" id="lobby">
+    <h2>Conectar sala</h2>
+    <div class="lobby-tabs">
+      <button id="tabHost">Crear sala</button>
+      <button id="tabJoin" class="secondary">Unirse con código</button>
+    </div>
+
+    <div id="hostPane">
+      <p style="font-size:12px;color:var(--muted);">Presiona el botón, comparte el código con la otra persona y espera a que se una.</p>
+      <button id="createRoomBtn">Generar código</button>
+      <div class="code-display hidden" id="hostCode"></div>
+      <div class="status-line" id="hostStatus"></div>
+    </div>
+
+    <div id="joinPane" class="hidden">
+      <input type="text" id="joinCodeInput" placeholder="Pega aquí el código de la sala">
+      <button id="joinRoomBtn">Unirme</button>
+      <div class="status-line" id="joinStatus"></div>
+    </div>
+  </div>
+
+  <!-- GAME AREA -->
+  <div class="gamearea" id="gamearea">
+
+    <div class="players-row">
+      <div class="player-card" id="cardP1">
+        <div class="pname">Jugador 1 (anfitrión)</div>
+        <div class="pmeta"><span class="conn-dot online" id="dotP1"></span><span id="metaP1">conectado</span></div>
+        <div class="pscore" id="scoreP1">0 aciertos</div>
+      </div>
+      <div class="player-card" id="cardP2">
+        <div class="pname">Jugador 2 (invitado)</div>
+        <div class="pmeta"><span class="conn-dot" id="dotP2"></span><span id="metaP2">esperando…</span></div>
+        <div class="pscore" id="scoreP2">0 aciertos</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <label>Cantidad
+        <input type="number" id="countInput" value="30" min="10" max="60">
+      </label>
+      <label>Distorsión
+        <select id="difficultySel">
+          <option value="baja">Baja</option>
+          <option value="media" selected>Media</option>
+          <option value="alta">Alta</option>
+        </select>
+      </label>
+      <button id="newGridBtn" class="secondary">Nuevo tablero</button>
+    </div>
+
+    <div class="toolbar">
+      <button id="startBtn">Iniciar</button>
+      <button id="pauseBtn" class="pause" disabled>Pausar</button>
+      <button id="resetBtn" class="reset">Reiniciar</button>
+    </div>
+
+    <div class="stats">
+      <div class="turn-badge" id="turnBadge">Turno: —</div>
+      <div class="stat"><div class="label">Tiempo número actual</div><div class="value" id="timerVal">00.00</div></div>
+      <div class="stat"><div class="label">Buscando</div><div class="value" id="nextVal">1</div></div>
+      <div class="stat"><div class="label">Encontrados</div><div class="value" id="foundVal">0/30</div></div>
+    </div>
+
+    <div class="layout">
+      <div class="board-wrap" id="boardWrap">
+        <div class="wait-overlay hidden" id="waitOverlay">Espera tu turno…</div>
+      </div>
+      <div class="scorecard">
+        <h3>Registro por número</h3>
+        <table class="scoregrid" id="scoreTable">
+          <thead><tr><th>N°</th><th>Turno</th><th>Tiempo</th></tr></thead>
+          <tbody id="scoreBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-note">Solo controles de Jugador 1 (anfitrión): cantidad, distorsión, nuevo tablero e iniciar/reiniciar. Ambos pueden pausar. Solo puede hacer clic quien tenga el turno activo.</div>
+  </div>
+
+<script>
+(function(){
+  // ---------- Lobby / connection ----------
+  const lobby = document.getElementById('lobby');
+  const gamearea = document.getElementById('gamearea');
+  const tabHost = document.getElementById('tabHost');
+  const tabJoin = document.getElementById('tabJoin');
+  const hostPane = document.getElementById('hostPane');
+  const joinPane = document.getElementById('joinPane');
+  const createRoomBtn = document.getElementById('createRoomBtn');
+  const hostCode = document.getElementById('hostCode');
+  const hostStatus = document.getElementById('hostStatus');
+  const joinCodeInput = document.getElementById('joinCodeInput');
+  const joinRoomBtn = document.getElementById('joinRoomBtn');
+  const joinStatus = document.getElementById('joinStatus');
+
+  tabHost.addEventListener('click', ()=>{
+    tabHost.classList.remove('secondary'); tabJoin.classList.add('secondary');
+    hostPane.classList.remove('hidden'); joinPane.classList.add('hidden');
+  });
+  tabJoin.addEventListener('click', ()=>{
+    tabJoin.classList.remove('secondary'); tabHost.classList.add('secondary');
+    joinPane.classList.remove('hidden'); hostPane.classList.add('hidden');
+  });
+
+  let peer = null;
+  let conn = null;
+  let isHost = false;
+  let localPlayer = null; // 1 or 2
+
+  function roomIdFrom(str){
+    return 'ftn-' + str.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  }
+
+  createRoomBtn.addEventListener('click', ()=>{
+    isHost = true; localPlayer = 1;
+    const code = Math.random().toString(36).substring(2,7);
+    const fullId = roomIdFrom(code);
+    peer = new Peer(fullId);
+    hostStatus.textContent = 'Generando sala...';
+    peer.on('open', ()=>{
+      hostCode.textContent = code;
+      hostCode.classList.remove('hidden');
+      hostStatus.textContent = 'Comparte este código. Esperando a que se una Jugador 2...';
+    });
+    peer.on('connection', (c)=>{
+      conn = c;
+      setupConnection();
+      conn.on('open', ()=>{
+        hostStatus.textContent = '¡Jugador 2 conectado!';
+        enterGame();
+      });
+    });
+    peer.on('error', (err)=>{ hostStatus.textContent = 'Error: ' + err.type; });
+  });
+
+  joinRoomBtn.addEventListener('click', ()=>{
+    const code = joinCodeInput.value;
+    if(!code.trim()){ joinStatus.textContent = 'Escribe el código primero.'; return; }
+    isHost = false; localPlayer = 2;
+    const fullId = roomIdFrom(code);
+    peer = new Peer();
+    joinStatus.textContent = 'Conectando...';
+    peer.on('open', ()=>{
+      conn = peer.connect(fullId, {reliable:true});
+      setupConnection();
+      conn.on('open', ()=>{
+        joinStatus.textContent = '¡Conectado!';
+        enterGame();
+      });
+    });
+    peer.on('error', (err)=>{ joinStatus.textContent = 'Error: ' + err.type + ' — revisa el código.'; });
+  });
+
+  function enterGame(){
+    lobby.classList.add('hidden');
+    gamearea.classList.add('show');
+    updateConnDots(true);
+    if(!isHost){
+      document.querySelectorAll('#gamearea .toolbar')[0].querySelectorAll('input,select,button').forEach(el=>el.disabled=true);
+      startBtn.disabled = true; resetBtn.disabled = true; newGridBtn.disabled = true;
+    }
+  }
+
+  function updateConnDots(online){
+    document.getElementById('dotP2').className = 'conn-dot' + (online ? ' online' : '');
+    document.getElementById('metaP2').textContent = online ? 'conectado' : 'desconectado';
+  }
+
+  function setupConnection(){
+    conn.on('data', (msg)=>{ handleMessage(msg); });
+    conn.on('close', ()=>{ updateConnDots(false); });
+  }
+
+  function send(msg){
+    if(conn && conn.open) conn.send(msg);
+  }
+
+  // ---------- Game logic ----------
+  const boardWrap = document.getElementById('boardWrap');
+  const waitOverlay = document.getElementById('waitOverlay');
+  const timerVal = document.getElementById('timerVal');
+  const nextVal = document.getElementById('nextVal');
+  const foundVal = document.getElementById('foundVal');
+  const turnBadge = document.getElementById('turnBadge');
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const newGridBtn = document.getElementById('newGridBtn');
+  const countInput = document.getElementById('countInput');
+  const difficultySel = document.getElementById('difficultySel');
+  const scoreBody = document.getElementById('scoreBody');
+  const cardP1 = document.getElementById('cardP1');
+  const cardP2 = document.getElementById('cardP2');
+  const scoreP1 = document.getElementById('scoreP1');
+  const scoreP2 = document.getElementById('scoreP2');
+
+  let count = 30;
+  let nextNumber = 1;
+  let segmentStart = null;
+  let elapsedBeforePause = 0;
+  let rafId = null;
+  let running = false;
+  let paused = false;
+  let gameActive = false;
+  let aciertos = {1:0, 2:0};
+
+  function turnLabel(n){ return (n % 2 === 1) ? 'Jugador 1' : 'Jugador 2'; }
+  function activePlayerFor(n){ return (n % 2 === 1) ? 1 : 2; }
+
+  function randomPositions(n){
+    const pts = [];
+    const minDist = 12;
+    let attempts = 0;
+    while(pts.length < n && attempts < n*400){
+      attempts++;
+      const x = 6 + Math.random()*84;
+      const y = 6 + Math.random()*84;
+      let ok = true;
+      for(const p of pts){ const dx=p.x-x, dy=p.y-y; if(Math.sqrt(dx*dx+dy*dy)<minDist){ok=false;break;} }
+      if(ok) pts.push({x,y});
+    }
+    while(pts.length < n) pts.push({x:6+Math.random()*84, y:6+Math.random()*84});
+    return pts;
+  }
+
+  function genDistractors(level){
+    const counts = { baja:6, media:14, alta:26 };
+    const n = counts[level] || 14;
+    const items = [];
+    for(let i=0;i<n;i++){
+      const type = ['circle','square','line','scribble','fakenum'][Math.floor(Math.random()*5)];
+      const x = Math.random()*90, y = Math.random()*90;
+      const rot = (Math.random()*60-30).toFixed(1);
+      let extra = {};
+      if(type==='circle'||type==='square'||type==='scribble'){ extra.size = 20+Math.random()*50; }
+      else if(type==='line'){ extra.len = 30+Math.random()*80; extra.rot2 = (Math.random()*180).toFixed(1); }
+      else if(type==='fakenum'){ extra.text = Math.floor(Math.random()*99); extra.fsize = 18+Math.random()*12; }
+      items.push({type,x,y,rot,...extra});
+    }
+    return items;
+  }
+
+  function renderDistractors(items){
+    items.forEach(d=>{
+      const el = document.createElement('div');
+      el.className = 'distractor ' + d.type;
+      el.style.left = d.x + '%'; el.style.top = d.y + '%';
+      if(d.type==='circle'||d.type==='square'||d.type==='scribble'){
+        el.style.width = d.size+'px'; el.style.height = d.size+'px'; el.style.transform = `rotate(${d.rot}deg)`;
+      } else if(d.type==='line'){
+        el.style.width = d.len+'px'; el.style.transform = `rotate(${d.rot2}deg)`;
+      } else if(d.type==='fakenum'){
+        el.textContent = d.text; el.style.fontSize = d.fsize+'px'; el.style.transform = `rotate(${d.rot}deg)`;
+      }
+      boardWrap.appendChild(el);
+    });
+  }
+
+  function renderNumbers(positions, nums, sizes){
+    positions.forEach((p, idx)=>{
+      const el = document.createElement('div');
+      el.className = 'num';
+      el.textContent = nums[idx];
+      el.style.left = p.x + '%'; el.style.top = p.y + '%';
+      el.style.transform = `rotate(${sizes[idx].rot}deg)`;
+      el.style.fontSize = sizes[idx].size + 'px';
+      el.dataset.value = nums[idx];
+      el.addEventListener('click', ()=>onTap(el));
+      boardWrap.appendChild(el);
+    });
+  }
+
+  function buildBoardData(){
+    count = Math.max(10, Math.min(60, parseInt(countInput.value)||30));
+    countInput.value = count;
+    const positions = randomPositions(count);
+    const nums = Array.from({length:count}, (_,i)=>i+1);
+    for(let i=nums.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [nums[i],nums[j]]=[nums[j],nums[i]]; }
+    const sizes = positions.map(()=>({ rot:(Math.random()*30-15).toFixed(1), size:(20+Math.random()*14).toFixed(0) }));
+    const distractors = genDistractors(difficultySel.value);
+    return { positions, nums, sizes, distractors, count };
+  }
+
+  function applyBoard(data){
+    [...boardWrap.querySelectorAll('.num, .distractor')].forEach(el=>el.remove());
+    count = data.count;
+    renderDistractors(data.distractors);
+    renderNumbers(data.positions, data.nums, data.sizes);
+    nextNumber = 1;
+    elapsedBeforePause = 0;
+    aciertos = {1:0,2:0};
+    updateAciertos();
+    nextVal.textContent = nextNumber;
+    foundVal.textContent = `0/${count}`;
+    timerVal.textContent = '00.00';
+    turnBadge.textContent = 'Turno: ' + turnLabel(nextNumber);
+    scoreBody.innerHTML = '';
+    gameActive = true;
+    updateTurnHighlight();
+    updateLockState();
+  }
+
+  function updateAciertos(){
+    scoreP1.textContent = aciertos[1] + ' aciertos';
+    scoreP2.textContent = aciertos[2] + ' aciertos';
+  }
+
+  function updateTurnHighlight(){
+    const active = activePlayerFor(nextNumber);
+    cardP1.classList.toggle('active-turn', active===1 && running);
+    cardP2.classList.toggle('active-turn', active===2 && running);
+  }
+
+  function updateLockState(){
+    const active = activePlayerFor(nextNumber);
+    const myTurn = (active === localPlayer);
+    const shouldLock = !(running && myTurn);
+    boardWrap.classList.toggle('locked', shouldLock);
+    waitOverlay.classList.toggle('hidden', !shouldLock || !gameActive || !running ? true : false);
+    if(gameActive && running && !myTurn){
+      waitOverlay.classList.remove('hidden');
+    } else {
+      waitOverlay.classList.add('hidden');
+    }
+  }
+
+  function tick(){
+    if(!running) return;
+    const elapsedMs = elapsedBeforePause + (performance.now() - segmentStart);
+    timerVal.textContent = (elapsedMs/1000).toFixed(2);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function localOnTapAllowed(){
+    return running && activePlayerFor(nextNumber) === localPlayer;
+  }
+
+  function onTap(el){
+    if(!localOnTapAllowed()) return;
+    const val = parseInt(el.dataset.value);
+    if(val === nextNumber){
+      const elapsedMs = elapsedBeforePause + (performance.now() - segmentStart);
+      const seconds = (elapsedMs/1000).toFixed(2);
+      registerFound(nextNumber, seconds, true);
+      send({type:'found', number: nextNumber, seconds});
+    } else {
+      el.classList.add('wrong');
+      setTimeout(()=>el.classList.remove('wrong'), 280);
+    }
+  }
+
+  function registerFound(number, seconds, isLocal){
+    const els = boardWrap.querySelectorAll('.num');
+    els.forEach(e=>{ if(parseInt(e.dataset.value)===number) e.classList.add('found'); });
+
+    const p = activePlayerFor(number);
+    aciertos[p]++;
+    updateAciertos();
+
+    const row = document.createElement('tr');
+    const turnClass = (p===1) ? 'turn-p1' : 'turn-p2';
+    row.innerHTML = `<td>${number}</td><td class="${turnClass}">${turnLabel(number)}</td><td>${seconds}s</td>`;
+    scoreBody.prepend(row);
+
+    running = false; paused = false;
+    cancelAnimationFrame(rafId);
+    pauseBtn.disabled = true; pauseBtn.textContent = 'Pausar';
+    elapsedBeforePause = 0;
+
+    nextNumber++;
+    if(nextNumber > count){
+      nextVal.textContent = '—';
+      foundVal.textContent = `${count}/${count}`;
+      turnBadge.textContent = '¡Completado!';
+      startBtn.textContent = 'Iniciar';
+      if(isHost) startBtn.disabled = true;
+      gameActive = false;
+    } else {
+      nextVal.textContent = nextNumber;
+      foundVal.textContent = `${nextNumber-1}/${count}`;
+      turnBadge.textContent = 'Turno: ' + turnLabel(nextNumber);
+      timerVal.textContent = '00.00';
+      startBtn.textContent = 'Siguiente número';
+      if(isHost) startBtn.disabled = false;
+    }
+    updateTurnHighlight();
+    updateLockState();
+  }
+
+  function beginSegment(fromRemote){
+    running = true; paused = false;
+    segmentStart = performance.now();
+    pauseBtn.disabled = false; pauseBtn.textContent = 'Pausar';
+    tick();
+    updateTurnHighlight();
+    updateLockState();
+  }
+
+  startBtn.addEventListener('click', ()=>{
+    if(!isHost) return;
+    if(!gameActive){
+      const data = buildBoardData();
+      send({type:'board', data});
+      applyBoard(data);
+    }
+    elapsedBeforePause = 0;
+    beginSegment();
+    startBtn.textContent = 'Buscando…';
+    startBtn.disabled = true;
+    send({type:'start'});
+  });
+
+  pauseBtn.addEventListener('click', ()=>{
+    if(running){
+      running = false; paused = true;
+      cancelAnimationFrame(rafId);
+      elapsedBeforePause += performance.now() - segmentStart;
+      pauseBtn.textContent = 'Reanudar';
+      send({type:'pause'});
+    } else if(paused){
+      segmentStart = performance.now();
+      running = true; paused = false;
+      pauseBtn.textContent = 'Pausar';
+      tick();
+      send({type:'resume'});
+    }
+    updateTurnHighlight();
+    updateLockState();
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    if(!isHost) return;
+    doReset();
+    send({type:'reset'});
+  });
+
+  function doReset(){
+    running=false; paused=false; gameActive=false;
+    cancelAnimationFrame(rafId);
+    elapsedBeforePause = 0;
+    [...boardWrap.querySelectorAll('.num, .distractor')].forEach(el=>el.remove());
+    scoreBody.innerHTML = '';
+    aciertos = {1:0,2:0}; updateAciertos();
+    timerVal.textContent = '00.00';
+    nextVal.textContent = '1';
+    foundVal.textContent = `0/${countInput.value}`;
+    turnBadge.textContent = 'Turno: —';
+    startBtn.textContent = 'Iniciar';
+    if(isHost) startBtn.disabled = false;
+    pauseBtn.disabled = true; pauseBtn.textContent = 'Pausar';
+    cardP1.classList.remove('active-turn'); cardP2.classList.remove('active-turn');
+    waitOverlay.classList.add('hidden');
+    boardWrap.classList.remove('locked');
+  }
+
+  newGridBtn.addEventListener('click', ()=>{
+    if(!isHost) return;
+    running=false; paused=false;
+    cancelAnimationFrame(rafId);
+    elapsedBeforePause = 0;
+    const data = buildBoardData();
+    send({type:'board', data});
+    applyBoard(data);
+    startBtn.textContent = 'Iniciar';
+    startBtn.disabled = false;
+    pauseBtn.disabled = true; pauseBtn.textContent = 'Pausar';
+  });
+
+  function handleMessage(msg){
+    if(msg.type === 'board'){
+      applyBoard(msg.data);
+      startBtn.textContent = 'Iniciar';
+    } else if(msg.type === 'start'){
+      beginSegment(true);
+      startBtn.textContent = 'Buscando…';
+    } else if(msg.type === 'found'){
+      registerFound(msg.number, msg.seconds, false);
+    } else if(msg.type === 'pause'){
+      if(running){
+        running = false; cancelAnimationFrame(rafId);
+        elapsedBeforePause += performance.now() - segmentStart;
+        pauseBtn.textContent = 'Reanudar'; pauseBtn.disabled = false;
+      }
+      updateTurnHighlight(); updateLockState();
+    } else if(msg.type === 'resume'){
+      segmentStart = performance.now();
+      running = true; paused = false;
+      pauseBtn.textContent = 'Pausar';
+      tick();
+      updateTurnHighlight(); updateLockState();
+    } else if(msg.type === 'reset'){
+      doReset();
+    }
+  }
+
+})();
+</script>
+
+</body>
+</html>
